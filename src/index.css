@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  /* Dark Theme */
+  --color-background: oklch(14.5% 0.022 285.75);
+  --color-foreground: oklch(98.48% 0.001 285.75);
+  --color-card: oklch(20% 0.02 285.75);
+  --color-card-foreground: oklch(98.48% 0.001 285.75);
+  --color-popover: oklch(20% 0.02 285.75);
+  --color-popover-foreground: oklch(98.48% 0.001 285.75);
+  --color-primary: oklch(70% 0.15 250);
+  --color-primary-foreground: oklch(14.5% 0.022 285.75);
+  --color-secondary: oklch(27% 0.02 285.75);
+  --color-secondary-foreground: oklch(98.48% 0.001 285.75);
+  --color-muted: oklch(27% 0.02 285.75);
+  --color-muted-foreground: oklch(65% 0.01 285.75);
+  --color-accent: oklch(27% 0.02 285.75);
+  --color-accent-foreground: oklch(98.48% 0.001 285.75);
+  --color-destructive: oklch(60% 0.2 27.32);
+  --color-destructive-foreground: oklch(98.48% 0.001 285.75);
+  --color-border: oklch(30% 0.02 285.75);
+  --color-input: oklch(30% 0.02 285.75);
+  --color-ring: oklch(70% 0.15 250);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .container {
+    @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+}
