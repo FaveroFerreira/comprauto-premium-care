@@ -12,9 +12,6 @@ pub enum AppError {
     #[error("Validation error: {0}")]
     Validation(String),
 
-    #[error("Authentication error: {0}")]
-    Auth(String),
-
     #[error("Duplicate entry: {0}")]
     Duplicate(String),
 
@@ -37,7 +34,6 @@ impl Serialize for AppError {
             AppError::Database(e) => ("database", e.to_string()),
             AppError::NotFound(msg) => ("not_found", msg.clone()),
             AppError::Validation(msg) => ("validation", msg.clone()),
-            AppError::Auth(msg) => ("auth", msg.clone()),
             AppError::Duplicate(msg) => ("duplicate", msg.clone()),
             AppError::Internal(msg) => ("internal", msg.clone()),
         };

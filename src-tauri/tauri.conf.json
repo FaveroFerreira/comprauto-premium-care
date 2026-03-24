@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "rech-performance-backoffice",
+  "productName": "comprauto-premium-care",
   "version": "0.1.0",
-  "identifier": "br.com.rechperformance",
+  "identifier": "br.com.comprautopremiumcare",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "rech-performance-backoffice",
+        "title": "Comprauto Premium Care",
         "width": 800,
         "height": 600
       }

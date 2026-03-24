@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    rech_performance_backoffice_lib::run()
+    comprauto_premium_care_lib::run()
 }

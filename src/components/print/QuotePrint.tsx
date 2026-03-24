@@ -144,7 +144,7 @@ export function QuotePrint({ data }: QuotePrintProps) {
             <tr>
               <td className="print-quote-id">ORÇAMENTO: {data.id.substring(0, 8)}</td>
               <td className="print-logo">
-                <img src={logoPdfDataUrl} alt="Rech Performance" />
+                <img src={logoPdfDataUrl} alt="Comprauto Premium Care" />
               </td>
               <td className="print-quote-date">Data: {formatDateTime(data.created_at)}</td>
             </tr>
@@ -171,34 +171,30 @@ export function QuotePrint({ data }: QuotePrintProps) {
         )}
       </div>
 
-      <div className="print-section">
-        <table className="print-table">
-          <thead>
-            <tr>
-              <th>Peça</th>
-              <th className="print-text-right">Qtd</th>
-              <th className="print-text-right">Valor Unit.</th>
-              <th className="print-text-right">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.items && data.items.length > 0 ? (
-              data.items.map((item, idx) => (
+      {data.items && data.items.length > 0 && (
+        <div className="print-section">
+          <table className="print-table">
+            <thead>
+              <tr>
+                <th>Peça</th>
+                <th className="print-text-right">Qtd</th>
+                <th className="print-text-right">Valor Unit.</th>
+                <th className="print-text-right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.map((item, idx) => (
                 <tr key={idx}>
                   <td>{item.part?.name || `Peça ${item.part_id}`}</td>
                   <td className="print-text-right">{item.quantity}</td>
                   <td className="print-text-right">{formatCurrency(item.unit_price)}</td>
                   <td className="print-text-right">{formatCurrency(item.quantity * item.unit_price)}</td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={4}>Nenhuma peça relacionada ao orçamento.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {data.labor_tasks && data.labor_tasks.length > 0 && (
         <div className="print-section">

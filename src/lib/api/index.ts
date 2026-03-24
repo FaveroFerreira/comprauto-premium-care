@@ -1,9 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
 import type {
-  User,
-  CreateUserInput,
-  UpdateUserInput,
-  LoginInput,
   Vehicle,
   CreateVehicleInput,
   UpdateVehicleInput,
@@ -27,18 +23,6 @@ import type {
   PaginationParams,
   MonthlyPartsReport,
 } from '@/types';
-
-// Auth API
-export const authApi = {
-  register: (input: CreateUserInput) => invoke<User>('register', { input }),
-  login: (input: LoginInput) => invoke<User>('login', { input }),
-  getCurrentUser: (userId: string) => invoke<User>('get_current_user', { userId }),
-  updateUser: (userId: string, input: UpdateUserInput) => invoke<User>('update_user', { userId, input }),
-  updatePassword: (userId: string, currentPassword: string, newPassword: string) =>
-    invoke<void>('update_password', { userId, currentPassword, newPassword }),
-  listUsers: () => invoke<User[]>('list_users'),
-  deleteUser: (userId: string) => invoke<void>('delete_user', { userId }),
-};
 
 // Vehicles API
 export const vehiclesApi = {

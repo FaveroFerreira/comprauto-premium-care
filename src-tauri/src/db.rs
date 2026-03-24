@@ -14,7 +14,7 @@ pub fn get_db_path(app: &AppHandle) -> PathBuf {
         .expect("Failed to get app data directory");
 
     std::fs::create_dir_all(&app_dir).expect("Failed to create app data directory");
-    app_dir.join("rech_performance.db")
+    app_dir.join("comprauto_premium_care.db")
 }
 
 pub fn init_db(app: &AppHandle) -> AppResult<Connection> {

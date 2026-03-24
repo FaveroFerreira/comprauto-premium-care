@@ -61,14 +61,6 @@ pub fn run() {
             commands::expenses::update_expense,
             commands::expenses::delete_expense,
             commands::expenses::get_expense_category_labels,
-            // Auth
-            commands::auth::register,
-            commands::auth::login,
-            commands::auth::get_current_user,
-            commands::auth::update_user,
-            commands::auth::update_password,
-            commands::auth::list_users,
-            commands::auth::delete_user,
             // Stats
             commands::stats::get_dashboard_stats,
             commands::stats::get_monthly_parts_report,

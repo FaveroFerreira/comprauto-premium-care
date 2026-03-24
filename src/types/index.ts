@@ -1,29 +1,3 @@
-// User types
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  email_verified_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateUserInput {
-  name: string;
-  email: string;
-  password: string;
-}
-
-export interface UpdateUserInput {
-  name?: string;
-  email?: string;
-}
-
-export interface LoginInput {
-  email: string;
-  password: string;
-}
-
 // Vehicle types
 export interface Vehicle {
   id: string;

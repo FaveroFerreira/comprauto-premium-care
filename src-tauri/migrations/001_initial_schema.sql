@@ -1,18 +1,6 @@
 -- ===========================================
--- Schema inicial - Rech Performance Backoffice
+-- Schema inicial - Comprauto Premium Care
 -- ===========================================
-
--- Usuários
-CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    email_verified_at TEXT,
-    password TEXT NOT NULL,
-    remember_token TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
 
 -- Clientes
 CREATE TABLE IF NOT EXISTS customers (

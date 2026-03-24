@@ -1,4 +1,4 @@
-pub mod user;
+
 pub mod vehicle;
 pub mod part_vehicle;
 pub mod part;
