@@ -13,6 +13,16 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new()
+            .headers({
+                let mut headers = std::collections::HashMap::new();
+                if let Some(token) = option_env!("UPDATER_GITHUB_TOKEN") {
+                    headers.insert("Authorization".to_string(), format!("Bearer {}", token));
+                }
+                headers
+            })
+            .build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             // Initialize database
             let conn = init_db(app.handle()).expect("Failed to initialize database");
