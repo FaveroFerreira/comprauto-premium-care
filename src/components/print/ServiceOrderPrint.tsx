@@ -134,7 +134,7 @@ export function ServiceOrderPrint({ data }: ServiceOrderPrintProps) {
         <table className="print-header-table">
           <tbody>
             <tr>
-              <td className="print-os-id">O.S.: {data.id.substring(0, 8)}</td>
+              <td className="print-os-id">O.S.: #{data.number ?? data.id.substring(0, 8)}</td>
               <td className="print-logo">
                 <img src={logoPdfDataUrl} alt="Comprauto Premium Care" />
               </td>

@@ -98,7 +98,7 @@ export default function QuotesShowPage() {
       <PrintPreviewModal
         open={showPreview}
         onOpenChange={setShowPreview}
-        title={`Orçamento #${data.id.substring(0, 8)}`}
+        title={`Orçamento #${data.number ?? data.id.substring(0, 8)}`}
       >
         <QuotePrint data={data} />
       </PrintPreviewModal>

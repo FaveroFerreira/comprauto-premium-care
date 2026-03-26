@@ -44,6 +44,7 @@ impl std::str::FromStr for QuoteStatus {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Quote {
     pub id: String,
+    pub number: Option<i64>,
     pub customer_id: Option<String>,
     pub customer_name: String,
     pub vehicle_brand: String,

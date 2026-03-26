@@ -364,6 +364,16 @@ export default function QuotesCreatePage() {
                       placeholder="Valor"
                       value={task.cost || ''}
                       onChange={(e) => updateLaborTask(index, 'cost', parseFloat(e.target.value) || 0)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Tab' && !e.shiftKey && index === laborTasks.length - 1) {
+                          e.preventDefault();
+                          addLaborTask();
+                          setTimeout(() => {
+                            const inputs = document.querySelectorAll<HTMLInputElement>('[placeholder="Descrição do serviço"]');
+                            inputs[inputs.length - 1]?.focus();
+                          }, 0);
+                        }
+                      }}
                     />
                   </div>
                   <Button type="button" variant="ghost" size="icon" onClick={() => removeLaborTask(index)}>

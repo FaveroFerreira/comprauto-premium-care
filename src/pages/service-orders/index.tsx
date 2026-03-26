@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { serviceOrdersApi } from '@/lib/api';
+import { serviceOrdersApi, customersApi } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Plus, Eye, Edit, FileText, CheckCircle, Loader2 } from 'lucide-react';
+import { Plus, Eye, Edit, FileText, CheckCircle, Loader2, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Pagination } from '@/components/ui/pagination';
 import {
@@ -25,9 +26,28 @@ export default function ServiceOrdersIndexPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [finishingId, setFinishingId] = useState<string | null>(null);
 
+  // Filters
+  const [filterCustomerId, setFilterCustomerId] = useState<string | undefined>();
+  const [filterCustomerName, setFilterCustomerName] = useState('');
+  const [filterPlate, setFilterPlate] = useState('');
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+
+  const { data: customers } = useQuery({
+    queryKey: ['customers', 'search', customerSearch],
+    queryFn: () => customersApi.search(customerSearch || ''),
+    enabled: showCustomerDropdown,
+  });
+
   const { data, isLoading } = useQuery({
-    queryKey: ['service-orders', currentPage],
-    queryFn: () => serviceOrdersApi.list({ page: currentPage, page_size: PAGE_SIZE }),
+    queryKey: ['service-orders', currentPage, filterCustomerId, filterPlate],
+    queryFn: () =>
+      serviceOrdersApi.list({
+        page: currentPage,
+        page_size: PAGE_SIZE,
+        customer_id: filterCustomerId,
+        vehicle_plate: filterPlate || undefined,
+      }),
   });
 
   const finishMutation = useMutation({
@@ -37,6 +57,15 @@ export default function ServiceOrdersIndexPage() {
       setFinishingId(null);
     },
   });
+
+  const hasFilters = !!filterCustomerId || !!filterPlate;
+
+  const clearFilters = () => {
+    setFilterCustomerId(undefined);
+    setFilterCustomerName('');
+    setFilterPlate('');
+    setCurrentPage(1);
+  };
 
   return (
     <div>
@@ -51,18 +80,97 @@ export default function ServiceOrdersIndexPage() {
         </Link>
       </div>
 
+      {/* Filters */}
+      <div className="bg-card rounded-lg border p-4 mb-4">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="relative flex-1 min-w-[200px] max-w-[300px]">
+            {filterCustomerId ? (
+              <div className="flex items-center gap-2 h-9 px-3 border rounded-md bg-muted/30">
+                <span className="text-sm truncate flex-1">{filterCustomerName}</span>
+                <button
+                  onClick={() => {
+                    setFilterCustomerId(undefined);
+                    setFilterCustomerName('');
+                    setCurrentPage(1);
+                  }}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Filtrar por cliente..."
+                  value={customerSearch}
+                  onChange={(e) => {
+                    setCustomerSearch(e.target.value);
+                    setShowCustomerDropdown(true);
+                  }}
+                  onFocus={() => setShowCustomerDropdown(true)}
+                  className="pl-8 h-9"
+                />
+                {showCustomerDropdown && customers && customers.length > 0 && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
+                    {customers.map((customer) => (
+                      <button
+                        key={customer.id}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent"
+                        onClick={() => {
+                          setFilterCustomerId(customer.id);
+                          setFilterCustomerName(customer.name);
+                          setCustomerSearch('');
+                          setShowCustomerDropdown(false);
+                          setCurrentPage(1);
+                        }}
+                      >
+                        <span className="font-medium">{customer.name}</span>
+                        {customer.cpf_cnpj && (
+                          <span className="text-muted-foreground ml-2">{customer.cpf_cnpj}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="w-[180px]">
+            <Input
+              placeholder="Filtrar por placa..."
+              value={filterPlate}
+              onChange={(e) => {
+                setFilterPlate(e.target.value.toUpperCase());
+                setCurrentPage(1);
+              }}
+              className="h-9"
+            />
+          </div>
+
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
+              <X className="h-4 w-4 mr-1" />
+              Limpar filtros
+            </Button>
+          )}
+        </div>
+      </div>
+
       <div className="bg-card rounded-lg border overflow-hidden">
         {isLoading ? (
           <div className="p-6 text-center text-muted-foreground">Carregando...</div>
         ) : data?.items.length === 0 ? (
           <div className="p-6 text-center text-muted-foreground">
-            Nenhuma ordem de serviço encontrada
+            {hasFilters ? 'Nenhuma OS encontrada com os filtros aplicados' : 'Nenhuma ordem de serviço encontrada'}
           </div>
         ) : (
           <>
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr>
+                  <th className="text-left p-3 text-sm font-medium w-16">#</th>
                   <th className="text-left p-3 text-sm font-medium">Cliente</th>
                   <th className="text-left p-3 text-sm font-medium">Veículo</th>
                   <th className="text-left p-3 text-sm font-medium">Placa</th>
@@ -75,6 +183,7 @@ export default function ServiceOrdersIndexPage() {
               <tbody>
                 {data?.items.map((order) => (
                   <tr key={order.id} className="border-t hover:bg-muted/30">
+                    <td className="p-3 font-medium">{order.number ?? '-'}</td>
                     <td className="p-3">{order.customer_name}</td>
                     <td className="p-3">
                       {order.vehicle_brand} {order.vehicle_model} ({order.vehicle_year})

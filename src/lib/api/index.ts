@@ -57,8 +57,8 @@ export const customersApi = {
 
 // Service Orders API
 export const serviceOrdersApi = {
-  list: (params?: PaginationParams & { customer_id?: string }) =>
-    invoke<Paginated<ServiceOrderWithParts>>('list_service_orders', { page: params?.page, pageSize: params?.page_size, customerId: params?.customer_id }),
+  list: (params?: PaginationParams & { customer_id?: string; vehicle_plate?: string }) =>
+    invoke<Paginated<ServiceOrderWithParts>>('list_service_orders', { page: params?.page, pageSize: params?.page_size, customerId: params?.customer_id, vehiclePlate: params?.vehicle_plate }),
   get: (id: string) => invoke<ServiceOrderWithParts>('get_service_order', { id }),
   create: (input: CreateServiceOrderInput) => invoke<ServiceOrderWithParts>('create_service_order', { input }),
   update: (id: string, input: UpdateServiceOrderInput) =>
@@ -69,8 +69,8 @@ export const serviceOrdersApi = {
 
 // Quotes API
 export const quotesApi = {
-  list: (params?: PaginationParams) =>
-    invoke<Paginated<QuoteWithParts>>('list_quotes', { page: params?.page, pageSize: params?.page_size }),
+  list: (params?: PaginationParams & { customer_id?: string; vehicle_plate?: string }) =>
+    invoke<Paginated<QuoteWithParts>>('list_quotes', { page: params?.page, pageSize: params?.page_size, customerId: params?.customer_id, vehiclePlate: params?.vehicle_plate }),
   get: (id: string) => invoke<QuoteWithParts>('get_quote', { id }),
   create: (input: CreateQuoteInput) => invoke<QuoteWithParts>('create_quote', { input }),
   update: (id: string, input: UpdateQuoteInput) => invoke<QuoteWithParts>('update_quote', { id, input }),

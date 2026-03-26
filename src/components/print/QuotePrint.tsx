@@ -142,7 +142,7 @@ export function QuotePrint({ data }: QuotePrintProps) {
         <table className="print-header-table">
           <tbody>
             <tr>
-              <td className="print-quote-id">ORÇAMENTO: {data.id.substring(0, 8)}</td>
+              <td className="print-quote-id">ORÇAMENTO: #{data.number ?? data.id.substring(0, 8)}</td>
               <td className="print-logo">
                 <img src={logoPdfDataUrl} alt="Comprauto Premium Care" />
               </td>
