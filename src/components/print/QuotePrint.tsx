@@ -62,6 +62,12 @@ export function QuotePrint({ data }: QuotePrintProps) {
           max-height: 60px;
           display: inline-block;
         }
+        .print-contact {
+          font-size: 8px;
+          color: #555;
+          margin-top: 4px;
+          line-height: 1.3;
+        }
         .print-quote-date {
           width: 33.33%;
           text-align: right;
@@ -145,6 +151,10 @@ export function QuotePrint({ data }: QuotePrintProps) {
               <td className="print-quote-id">ORÇAMENTO: #{data.number ?? data.id.substring(0, 8)}</td>
               <td className="print-logo">
                 <img src={logoPdfDataUrl} alt="Comprauto Premium Care" />
+                <div className="print-contact">
+                  (54) 99993-9570 | comprautopremiumcare@gmail.com<br />
+                  Rua Fagundes dos Reis, 1900 - Fátima - Passo Fundo/RS - CEP 99020-080
+                </div>
               </td>
               <td className="print-quote-date">Data: {formatDateTime(data.created_at)}</td>
             </tr>

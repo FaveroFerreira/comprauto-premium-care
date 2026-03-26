@@ -13,15 +13,17 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_updater::Builder::new()
-            .headers({
-                let mut headers = std::collections::HashMap::new();
-                if let Some(token) = option_env!("UPDATER_GITHUB_TOKEN") {
-                    headers.insert("Authorization".to_string(), format!("Bearer {}", token));
+        .plugin({
+            let mut updater = tauri_plugin_updater::Builder::new();
+            if let Some(token) = option_env!("UPDATER_GITHUB_TOKEN") {
+                let mut headers = reqwest::header::HeaderMap::new();
+                if let Ok(val) = reqwest::header::HeaderValue::from_str(&format!("Bearer {}", token)) {
+                    headers.insert(reqwest::header::AUTHORIZATION, val);
                 }
-                headers
-            })
-            .build())
+                updater = updater.headers(headers);
+            }
+            updater.build()
+        })
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
             // Initialize database
