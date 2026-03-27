@@ -35,7 +35,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc5MkU4OTQ3RUFFRDcwREIKUldUYmNPM3FSNGt1ZWY0TlhDVmY3MEMwZjN6QzNXRzhvaTJFVXBaeVVkMmVwRlA3a2NLMGJLMDYK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDBCMkU0Q0UyM0M4ODIzMTUKUldRVkk0Zzg0a3d1QzU0RGFYQ3UwcEk4MmV1UWNFOGtRaUVqcWlzbDM0Y2xGV1RuLzhRM3RscmQK",
       "endpoints": [
         "https://github.com/FaveroFerreira/comprauto-premium-care/releases/latest/download/latest.json"
       ]
