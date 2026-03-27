@@ -76,6 +76,7 @@ pub fn run() {
             // Stats
             commands::stats::get_dashboard_stats,
             commands::stats::get_monthly_parts_report,
+            commands::stats::get_customer_orders_report,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

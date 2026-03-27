@@ -349,3 +349,35 @@ export interface MonthlyPartsReport {
   items: MonthlyPartsReportItem[];
   total_sale: number;
 }
+
+// Customer Orders Report types
+export interface CustomerOrderItem {
+  id: string;
+  number: number | null;
+  vehicle: string;
+  vehicle_plate: string | null;
+  status: string;
+  total: number;
+  created_at: string;
+}
+
+export interface CustomerOrdersSummary {
+  customer_id: string;
+  customer_name: string;
+  open_count: number;
+  finished_count: number;
+  open_total: number;
+  finished_total: number;
+  total: number;
+  orders: CustomerOrderItem[];
+}
+
+export interface CustomerOrdersReport {
+  year: number;
+  month: number;
+  month_label: string;
+  customers: CustomerOrdersSummary[];
+  total_open: number;
+  total_finished: number;
+  total: number;
+}

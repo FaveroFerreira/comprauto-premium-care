@@ -3,6 +3,7 @@ use tauri::State;
 use crate::db::DbConnection;
 use crate::error::{AppError, AppResult};
 use crate::models::stats::{
+    CustomerOrderItem, CustomerOrdersReport, CustomerOrdersSummary,
     DashboardStats, ExpenseByCategory, MonthlyPartsReport, MonthlyPartsReportItem,
     RevenueExpenseByMonth, ServiceOrdersByMonth,
 };
@@ -228,5 +229,112 @@ pub fn get_monthly_parts_report(
         month_label: get_month_label(month).to_string(),
         items,
         total_sale,
+    })
+}
+
+#[tauri::command]
+pub fn get_customer_orders_report(
+    db: State<DbConnection>,
+    year: i32,
+    month: i32,
+) -> AppResult<CustomerOrdersReport> {
+    let conn = db
+        .0
+        .lock()
+        .map_err(|_| AppError::Internal("Failed to acquire database lock".to_string()))?;
+
+    let month_str = format!("{:04}-{:02}", year, month);
+
+    let mut stmt = conn.prepare(
+        "SELECT
+            so.id,
+            so.number,
+            so.customer_id,
+            COALESCE(c.name, so.customer_name) as customer_name,
+            so.vehicle_brand || ' ' || so.vehicle_model as vehicle,
+            so.vehicle_plate,
+            so.status,
+            (so.parts_total + so.labor_cost) as total,
+            so.created_at
+         FROM service_orders so
+         LEFT JOIN customers c ON so.customer_id = c.id
+         WHERE strftime('%Y-%m', so.created_at) = ?
+         ORDER BY customer_name, so.created_at DESC",
+    )?;
+
+    let rows = stmt.query_map([&month_str], |row| {
+        Ok((
+            row.get::<_, String>(2).unwrap_or_default(), // customer_id
+            row.get::<_, String>(3)?,                     // customer_name
+            CustomerOrderItem {
+                id: row.get(0)?,
+                number: row.get(1)?,
+                vehicle: row.get(4)?,
+                vehicle_plate: row.get(5)?,
+                status: row.get(6)?,
+                total: row.get(7)?,
+                created_at: row.get(8)?,
+            },
+        ))
+    })?;
+
+    let mut customer_keys: Vec<String> = Vec::new();
+    let mut customers_map: std::collections::HashMap<String, CustomerOrdersSummary> =
+        std::collections::HashMap::new();
+
+    for row in rows {
+        if let Ok((customer_id, customer_name, order)) = row {
+            let key = if customer_id.is_empty() {
+                customer_name.clone()
+            } else {
+                customer_id.clone()
+            };
+
+            if !customers_map.contains_key(&key) {
+                customer_keys.push(key.clone());
+            }
+            let entry = customers_map.entry(key).or_insert_with(|| CustomerOrdersSummary {
+                customer_id: customer_id.clone(),
+                customer_name: customer_name.clone(),
+                open_count: 0,
+                finished_count: 0,
+                open_total: 0.0,
+                finished_total: 0.0,
+                total: 0.0,
+                orders: Vec::new(),
+            });
+
+            match order.status.as_str() {
+                "OPEN" => {
+                    entry.open_count += 1;
+                    entry.open_total += order.total;
+                }
+                "FINISHED" => {
+                    entry.finished_count += 1;
+                    entry.finished_total += order.total;
+                }
+                _ => {}
+            }
+            entry.total += order.total;
+            entry.orders.push(order);
+        }
+    }
+
+    let customers: Vec<CustomerOrdersSummary> = customer_keys
+        .into_iter()
+        .filter_map(|k| customers_map.remove(&k))
+        .collect();
+    let total_open: f64 = customers.iter().map(|c| c.open_total).sum();
+    let total_finished: f64 = customers.iter().map(|c| c.finished_total).sum();
+    let total = total_open + total_finished;
+
+    Ok(CustomerOrdersReport {
+        year,
+        month,
+        month_label: get_month_label(month).to_string(),
+        customers,
+        total_open,
+        total_finished,
+        total,
     })
 }
