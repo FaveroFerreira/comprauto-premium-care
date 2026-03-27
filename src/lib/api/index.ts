@@ -22,6 +22,7 @@ import type {
   Paginated,
   PaginationParams,
   MonthlyPartsReport,
+  CustomerOrdersReport,
 } from '@/types';
 
 // Vehicles API
@@ -94,4 +95,6 @@ export const statsApi = {
   getDashboardStats: () => invoke<DashboardStats>('get_dashboard_stats'),
   getMonthlyPartsReport: (year: number, month: number) =>
     invoke<MonthlyPartsReport>('get_monthly_parts_report', { year, month }),
+  getCustomerOrdersReport: (year: number, month: number) =>
+    invoke<CustomerOrdersReport>('get_customer_orders_report', { year, month }),
 };

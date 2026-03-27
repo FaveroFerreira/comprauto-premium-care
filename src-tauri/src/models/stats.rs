@@ -57,3 +57,37 @@ pub struct MonthlyPartsReport {
     pub items: Vec<MonthlyPartsReportItem>,
     pub total_sale: f64,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CustomerOrdersSummary {
+    pub customer_id: String,
+    pub customer_name: String,
+    pub open_count: i32,
+    pub finished_count: i32,
+    pub open_total: f64,
+    pub finished_total: f64,
+    pub total: f64,
+    pub orders: Vec<CustomerOrderItem>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CustomerOrderItem {
+    pub id: String,
+    pub number: Option<i64>,
+    pub vehicle: String,
+    pub vehicle_plate: Option<String>,
+    pub status: String,
+    pub total: f64,
+    pub created_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CustomerOrdersReport {
+    pub year: i32,
+    pub month: i32,
+    pub month_label: String,
+    pub customers: Vec<CustomerOrdersSummary>,
+    pub total_open: f64,
+    pub total_finished: f64,
+    pub total: f64,
+}
