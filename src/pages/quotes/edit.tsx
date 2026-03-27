@@ -485,6 +485,16 @@ export default function QuotesEditPage() {
                       value={task.cost || ''}
                       onChange={(e) => updateLaborTask(index, 'cost', parseFloat(e.target.value) || 0)}
                       disabled={isConverted}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Tab' && !e.shiftKey && !isConverted && index === laborTasks.length - 1) {
+                          e.preventDefault();
+                          addLaborTask();
+                          setTimeout(() => {
+                            const inputs = document.querySelectorAll<HTMLInputElement>('[placeholder="Descrição do serviço"]');
+                            inputs[inputs.length - 1]?.focus();
+                          }, 0);
+                        }
+                      }}
                     />
                   </div>
                   {!isConverted && (

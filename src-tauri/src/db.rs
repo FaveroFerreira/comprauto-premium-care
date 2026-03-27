@@ -65,5 +65,6 @@ fn run_migrations(conn: &Connection) -> AppResult<()> {
 fn get_migrations() -> Vec<(&'static str, &'static str)> {
     vec![
         ("001_initial_schema", include_str!("../migrations/001_initial_schema.sql")),
+        ("002_add_sequential_numbers", include_str!("../migrations/002_add_sequential_numbers.sql")),
     ]
 }

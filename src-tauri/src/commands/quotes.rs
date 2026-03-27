@@ -40,31 +40,45 @@ fn calculate_labor_cost(tasks: &Option<Vec<LaborTask>>) -> f64 {
         .unwrap_or(0.0)
 }
 
+fn next_number(conn: &Connection, counter_name: &str) -> crate::error::AppResult<i64> {
+    conn.execute(
+        "UPDATE counters SET value = value + 1 WHERE name = ?",
+        [counter_name],
+    )?;
+    let value: i64 = conn.query_row(
+        "SELECT value FROM counters WHERE name = ?",
+        [counter_name],
+        |row| row.get(0),
+    )?;
+    Ok(value)
+}
+
 fn row_to_quote(row: &rusqlite::Row) -> rusqlite::Result<Quote> {
-    let labor_tasks_str: Option<String> = row.get(10)?;
-    let status_str: String = row.get(11)?;
+    let labor_tasks_str: Option<String> = row.get(11)?;
+    let status_str: String = row.get(12)?;
     Ok(Quote {
         id: row.get(0)?,
-        customer_id: row.get(1)?,
-        customer_name: row.get(2)?,
-        vehicle_brand: row.get(3)?,
-        vehicle_model: row.get(4)?,
-        vehicle_year: row.get(5)?,
-        vehicle_plate: row.get(6)?,
-        mileage: row.get(7)?,
-        parts_total: row.get(8)?,
-        labor_cost: row.get(9)?,
+        number: row.get(1)?,
+        customer_id: row.get(2)?,
+        customer_name: row.get(3)?,
+        vehicle_brand: row.get(4)?,
+        vehicle_model: row.get(5)?,
+        vehicle_year: row.get(6)?,
+        vehicle_plate: row.get(7)?,
+        mileage: row.get(8)?,
+        parts_total: row.get(9)?,
+        labor_cost: row.get(10)?,
         labor_tasks: parse_labor_tasks(labor_tasks_str),
         status: status_str.parse().unwrap_or(QuoteStatus::Pending),
-        valid_until: row.get(12)?,
-        converted_service_order_id: row.get(13)?,
-        created_at: row.get(14)?,
-        updated_at: row.get(15)?,
+        valid_until: row.get(13)?,
+        converted_service_order_id: row.get(14)?,
+        created_at: row.get(15)?,
+        updated_at: row.get(16)?,
     })
 }
 
 const SELECT_Q: &str =
-    "q.id, q.customer_id, COALESCE(c.name, q.customer_name) as customer_name, q.vehicle_brand, q.vehicle_model, q.vehicle_year, q.vehicle_plate, q.mileage, q.parts_total, q.labor_cost, q.labor_tasks, q.status, q.valid_until, q.converted_service_order_id, q.created_at, q.updated_at";
+    "q.id, q.number, q.customer_id, COALESCE(c.name, q.customer_name) as customer_name, q.vehicle_brand, q.vehicle_model, q.vehicle_year, q.vehicle_plate, q.mileage, q.parts_total, q.labor_cost, q.labor_tasks, q.status, q.valid_until, q.converted_service_order_id, q.created_at, q.updated_at";
 
 const FROM_Q: &str = "quotes q LEFT JOIN customers c ON q.customer_id = c.id";
 
@@ -117,24 +131,48 @@ fn update_parts_total(conn: &Connection, quote_id: &str) -> AppResult<f64> {
 }
 
 #[tauri::command]
-pub fn list_quotes(db: State<DbConnection>, page: Option<i64>, page_size: Option<i64>) -> AppResult<PaginatedQuotes> {
+pub fn list_quotes(db: State<DbConnection>, page: Option<i64>, page_size: Option<i64>, customer_id: Option<String>, vehicle_plate: Option<String>) -> AppResult<PaginatedQuotes> {
     let conn = db.0.lock().map_err(|_| AppError::Internal("Failed to acquire database lock".to_string()))?;
 
     let page = page.unwrap_or(1).max(1);
     let page_size = page_size.unwrap_or(10).max(1).min(100);
     let offset = (page - 1) * page_size;
 
-    let total: i64 = conn.query_row("SELECT COUNT(*) FROM quotes", [], |row| row.get(0))?;
+    let mut conditions = Vec::new();
+    let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+
+    if let Some(ref cid) = customer_id {
+        conditions.push("q.customer_id = ?");
+        params.push(Box::new(cid.clone()));
+    }
+    if let Some(ref plate) = vehicle_plate {
+        if !plate.is_empty() {
+            conditions.push("q.vehicle_plate LIKE ?");
+            params.push(Box::new(format!("%{}%", plate)));
+        }
+    }
+
+    let where_clause = if conditions.is_empty() {
+        String::new()
+    } else {
+        format!(" WHERE {}", conditions.join(" AND "))
+    };
+
+    let count_sql = format!("SELECT COUNT(*) FROM quotes q{}", where_clause);
+    let total: i64 = conn.query_row(&count_sql, rusqlite::params_from_iter(params.iter().map(|p| p.as_ref())), |row| row.get(0))?;
     let total_pages = (total as f64 / page_size as f64).ceil() as i64;
 
+    params.push(Box::new(page_size));
+    params.push(Box::new(offset));
+
     let query = format!(
-        "SELECT {} FROM {} ORDER BY q.created_at DESC LIMIT ? OFFSET ?",
-        SELECT_Q, FROM_Q
+        "SELECT {} FROM {}{} ORDER BY q.created_at DESC LIMIT ? OFFSET ?",
+        SELECT_Q, FROM_Q, where_clause
     );
     let mut stmt = conn.prepare(&query)?;
 
     let quotes: Vec<Quote> = stmt
-        .query_map([page_size, offset], |row| row_to_quote(row))?
+        .query_map(rusqlite::params_from_iter(params.iter().map(|p| p.as_ref())), |row| row_to_quote(row))?
         .collect::<Result<Vec<_>, _>>()?;
 
     let mut result = Vec::new();
@@ -181,6 +219,7 @@ pub fn create_quote(db: State<DbConnection>, input: CreateQuoteInput) -> AppResu
 
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
+    let number = next_number(&conn, "quotes")?;
     let labor_cost = calculate_labor_cost(&input.labor_tasks);
     let labor_tasks_json = input
         .labor_tasks
@@ -196,10 +235,11 @@ pub fn create_quote(db: State<DbConnection>, input: CreateQuoteInput) -> AppResu
     });
 
     conn.execute(
-        "INSERT INTO quotes (id, customer_id, customer_name, vehicle_brand, vehicle_model, vehicle_year, vehicle_plate, mileage, parts_total, labor_cost, labor_tasks, status, valid_until, created_at, updated_at)
-         VALUES (?, ?, '', ?, ?, ?, ?, ?, 0, ?, ?, 'PENDING', ?, ?, ?)",
+        "INSERT INTO quotes (id, number, customer_id, customer_name, vehicle_brand, vehicle_model, vehicle_year, vehicle_plate, mileage, parts_total, labor_cost, labor_tasks, status, valid_until, created_at, updated_at)
+         VALUES (?, ?, ?, '', ?, ?, ?, ?, ?, 0, ?, ?, 'PENDING', ?, ?, ?)",
         (
             &id,
+            number,
             &input.customer_id,
             &input.vehicle_brand,
             &input.vehicle_model,
@@ -361,11 +401,14 @@ pub fn convert_quote_to_service_order(
         .as_ref()
         .map(|t| serde_json::to_string(t).unwrap_or_default());
 
+    let so_number = next_number(&conn, "service_orders")?;
+
     conn.execute(
-        "INSERT INTO service_orders (id, customer_id, customer_name, vehicle_brand, vehicle_model, vehicle_year, vehicle_plate, mileage, parts_total, labor_cost, labor_tasks, status, created_at, updated_at)
-         VALUES (?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', ?, ?)",
+        "INSERT INTO service_orders (id, number, customer_id, customer_name, vehicle_brand, vehicle_model, vehicle_year, vehicle_plate, mileage, parts_total, labor_cost, labor_tasks, status, created_at, updated_at)
+         VALUES (?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', ?, ?)",
         (
             &service_order_id,
+            so_number,
             &quote.customer_id,
             &quote.vehicle_brand,
             &quote.vehicle_model,
@@ -404,30 +447,31 @@ pub fn convert_quote_to_service_order(
     )?;
 
     // Return the created service order using the same JOIN pattern from service_orders module
-    let so_query = "SELECT so.id, so.customer_id, COALESCE(c.name, so.customer_name) as customer_name, so.vehicle_brand, so.vehicle_model, so.vehicle_year, so.vehicle_plate, so.mileage, so.parts_total, so.labor_cost, so.labor_tasks, so.status, so.created_at, so.updated_at FROM service_orders so LEFT JOIN customers c ON so.customer_id = c.id WHERE so.id = ?";
+    let so_query = "SELECT so.id, so.number, so.customer_id, COALESCE(c.name, so.customer_name) as customer_name, so.vehicle_brand, so.vehicle_model, so.vehicle_year, so.vehicle_plate, so.mileage, so.parts_total, so.labor_cost, so.labor_tasks, so.status, so.created_at, so.updated_at FROM service_orders so LEFT JOIN customers c ON so.customer_id = c.id WHERE so.id = ?";
 
     let status_parse = |s: &str| -> ServiceOrderStatus {
         s.parse().unwrap_or(ServiceOrderStatus::Open)
     };
 
     let service_order = conn.query_row(so_query, [&service_order_id], |row| {
-        let status_str: String = row.get(11)?;
-        let labor_tasks_str: Option<String> = row.get(10)?;
+        let status_str: String = row.get(12)?;
+        let labor_tasks_str: Option<String> = row.get(11)?;
         Ok(crate::models::service_order::ServiceOrder {
             id: row.get(0)?,
-            customer_id: row.get(1)?,
-            customer_name: row.get(2)?,
-            vehicle_brand: row.get(3)?,
-            vehicle_model: row.get(4)?,
-            vehicle_year: row.get(5)?,
-            vehicle_plate: row.get(6)?,
-            mileage: row.get(7)?,
-            parts_total: row.get(8)?,
-            labor_cost: row.get(9)?,
+            number: row.get(1)?,
+            customer_id: row.get(2)?,
+            customer_name: row.get(3)?,
+            vehicle_brand: row.get(4)?,
+            vehicle_model: row.get(5)?,
+            vehicle_year: row.get(6)?,
+            vehicle_plate: row.get(7)?,
+            mileage: row.get(8)?,
+            parts_total: row.get(9)?,
+            labor_cost: row.get(10)?,
             labor_tasks: parse_labor_tasks(labor_tasks_str),
             status: status_parse(&status_str),
-            created_at: row.get(12)?,
-            updated_at: row.get(13)?,
+            created_at: row.get(13)?,
+            updated_at: row.get(14)?,
         })
     })?;
 

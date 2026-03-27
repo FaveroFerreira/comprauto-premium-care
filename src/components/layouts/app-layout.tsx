@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
+import { UpdateChecker } from '@/components/shared/update-checker';
 import {
   ClipboardList,
   FileText,
@@ -91,6 +92,8 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      <UpdateChecker />
     </div>
   );
 }

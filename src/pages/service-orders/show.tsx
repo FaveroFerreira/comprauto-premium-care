@@ -59,7 +59,7 @@ export default function ServiceOrdersShowPage() {
       <PrintPreviewModal
         open={showPreview}
         onOpenChange={setShowPreview}
-        title={`Ordem de Serviço #${data.id.substring(0, 8)}`}
+        title={`Ordem de Serviço #${data.number ?? data.id.substring(0, 8)}`}
       >
         <ServiceOrderPrint data={data} />
       </PrintPreviewModal>

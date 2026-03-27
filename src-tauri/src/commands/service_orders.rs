@@ -40,29 +40,43 @@ fn calculate_labor_cost(tasks: &Option<Vec<LaborTask>>) -> f64 {
         .unwrap_or(0.0)
 }
 
+fn next_number(conn: &Connection, counter_name: &str) -> AppResult<i64> {
+    conn.execute(
+        "UPDATE counters SET value = value + 1 WHERE name = ?",
+        [counter_name],
+    )?;
+    let value: i64 = conn.query_row(
+        "SELECT value FROM counters WHERE name = ?",
+        [counter_name],
+        |row| row.get(0),
+    )?;
+    Ok(value)
+}
+
 fn row_to_service_order(row: &rusqlite::Row) -> rusqlite::Result<ServiceOrder> {
-    let status_str: String = row.get(11)?;
-    let labor_tasks_str: Option<String> = row.get(10)?;
+    let status_str: String = row.get(12)?;
+    let labor_tasks_str: Option<String> = row.get(11)?;
     Ok(ServiceOrder {
         id: row.get(0)?,
-        customer_id: row.get(1)?,
-        customer_name: row.get(2)?,
-        vehicle_brand: row.get(3)?,
-        vehicle_model: row.get(4)?,
-        vehicle_year: row.get(5)?,
-        vehicle_plate: row.get(6)?,
-        mileage: row.get(7)?,
-        parts_total: row.get(8)?,
-        labor_cost: row.get(9)?,
+        number: row.get(1)?,
+        customer_id: row.get(2)?,
+        customer_name: row.get(3)?,
+        vehicle_brand: row.get(4)?,
+        vehicle_model: row.get(5)?,
+        vehicle_year: row.get(6)?,
+        vehicle_plate: row.get(7)?,
+        mileage: row.get(8)?,
+        parts_total: row.get(9)?,
+        labor_cost: row.get(10)?,
         labor_tasks: parse_labor_tasks(labor_tasks_str),
         status: status_str.parse().unwrap_or(ServiceOrderStatus::Open),
-        created_at: row.get(12)?,
-        updated_at: row.get(13)?,
+        created_at: row.get(13)?,
+        updated_at: row.get(14)?,
     })
 }
 
 const SELECT_SO: &str =
-    "so.id, so.customer_id, COALESCE(c.name, so.customer_name) as customer_name, so.vehicle_brand, so.vehicle_model, so.vehicle_year, so.vehicle_plate, so.mileage, so.parts_total, so.labor_cost, so.labor_tasks, so.status, so.created_at, so.updated_at";
+    "so.id, so.number, so.customer_id, COALESCE(c.name, so.customer_name) as customer_name, so.vehicle_brand, so.vehicle_model, so.vehicle_year, so.vehicle_plate, so.mileage, so.parts_total, so.labor_cost, so.labor_tasks, so.status, so.created_at, so.updated_at";
 
 const FROM_SO: &str = "service_orders so LEFT JOIN customers c ON so.customer_id = c.id";
 
@@ -118,26 +132,39 @@ fn update_parts_total(conn: &Connection, service_order_id: &str) -> AppResult<f6
 }
 
 #[tauri::command]
-pub fn list_service_orders(db: State<DbConnection>, page: Option<i64>, page_size: Option<i64>, customer_id: Option<String>) -> AppResult<PaginatedServiceOrders> {
+pub fn list_service_orders(db: State<DbConnection>, page: Option<i64>, page_size: Option<i64>, customer_id: Option<String>, vehicle_plate: Option<String>) -> AppResult<PaginatedServiceOrders> {
     let conn = db.0.lock().map_err(|_| AppError::Internal("Failed to acquire database lock".to_string()))?;
 
     let page = page.unwrap_or(1).max(1);
     let page_size = page_size.unwrap_or(10).max(1).min(100);
     let offset = (page - 1) * page_size;
 
-    let (where_clause, count_where) = if customer_id.is_some() {
-        (" WHERE so.customer_id = ?", " WHERE customer_id = ?")
+    let mut conditions = Vec::new();
+    let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+
+    if let Some(ref cid) = customer_id {
+        conditions.push("so.customer_id = ?");
+        params.push(Box::new(cid.clone()));
+    }
+    if let Some(ref plate) = vehicle_plate {
+        if !plate.is_empty() {
+            conditions.push("so.vehicle_plate LIKE ?");
+            params.push(Box::new(format!("%{}%", plate)));
+        }
+    }
+
+    let where_clause = if conditions.is_empty() {
+        String::new()
     } else {
-        ("", "")
+        format!(" WHERE {}", conditions.join(" AND "))
     };
 
-    let count_sql = format!("SELECT COUNT(*) FROM service_orders{}", count_where);
-    let total: i64 = if let Some(ref cid) = customer_id {
-        conn.query_row(&count_sql, [cid], |row| row.get(0))?
-    } else {
-        conn.query_row(&count_sql, [], |row| row.get(0))?
-    };
+    let count_sql = format!("SELECT COUNT(*) FROM service_orders so{}", where_clause);
+    let total: i64 = conn.query_row(&count_sql, rusqlite::params_from_iter(params.iter().map(|p| p.as_ref())), |row| row.get(0))?;
     let total_pages = (total as f64 / page_size as f64).ceil() as i64;
+
+    params.push(Box::new(page_size));
+    params.push(Box::new(offset));
 
     let query = format!(
         "SELECT {} FROM {}{} ORDER BY so.created_at DESC LIMIT ? OFFSET ?",
@@ -145,13 +172,9 @@ pub fn list_service_orders(db: State<DbConnection>, page: Option<i64>, page_size
     );
     let mut stmt = conn.prepare(&query)?;
 
-    let orders: Vec<ServiceOrder> = if let Some(ref cid) = customer_id {
-        stmt.query_map(rusqlite::params![cid, page_size, offset], |row| row_to_service_order(row))?
-            .collect::<Result<Vec<_>, _>>()?
-    } else {
-        stmt.query_map([page_size, offset], |row| row_to_service_order(row))?
-            .collect::<Result<Vec<_>, _>>()?
-    };
+    let orders: Vec<ServiceOrder> = stmt
+        .query_map(rusqlite::params_from_iter(params.iter().map(|p| p.as_ref())), |row| row_to_service_order(row))?
+        .collect::<Result<Vec<_>, _>>()?;
 
     let mut result = Vec::new();
     for order in orders {
@@ -208,6 +231,7 @@ pub fn create_service_order(
 
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
+    let number = next_number(&conn, "service_orders")?;
     let labor_cost = calculate_labor_cost(&input.labor_tasks);
     let labor_tasks_json = input
         .labor_tasks
@@ -215,10 +239,11 @@ pub fn create_service_order(
         .map(|t| serde_json::to_string(t).unwrap_or_default());
 
     conn.execute(
-        "INSERT INTO service_orders (id, customer_id, customer_name, vehicle_brand, vehicle_model, vehicle_year, vehicle_plate, mileage, parts_total, labor_cost, labor_tasks, status, created_at, updated_at)
-         VALUES (?, ?, '', ?, ?, ?, ?, ?, 0, ?, ?, 'OPEN', ?, ?)",
+        "INSERT INTO service_orders (id, number, customer_id, customer_name, vehicle_brand, vehicle_model, vehicle_year, vehicle_plate, mileage, parts_total, labor_cost, labor_tasks, status, created_at, updated_at)
+         VALUES (?, ?, ?, '', ?, ?, ?, ?, ?, 0, ?, ?, 'OPEN', ?, ?)",
         (
             &id,
+            number,
             &input.customer_id,
             &input.vehicle_brand,
             &input.vehicle_model,

@@ -132,6 +132,7 @@ export interface ServiceOrderPart {
 
 export interface ServiceOrder {
   id: string;
+  number: number | null;
   customer_id: string | null;
   customer_name: string;
   vehicle_brand: string;
@@ -198,6 +199,7 @@ export interface QuotePart {
 
 export interface Quote {
   id: string;
+  number: number | null;
   customer_id: string | null;
   customer_name: string;
   vehicle_brand: string;
